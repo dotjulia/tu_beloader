@@ -25,6 +25,9 @@ struct Cli {
     /// Login using username and password
     #[arg(short, long, value_name = "password")]
     password: Option<String>,
+    /// OTP token if enabled
+    #[arg(short, long, value_name = "otp_token")]
+    otp_token: Option<String>,
 }
 
 fn are_args_provided(cli: &Cli) -> bool {
@@ -37,7 +40,11 @@ fn cli_mode(client: Client, cli: &Cli) {
             println!("Please provide password");
             return
         }
-        match api::login(&client, &cli.username.as_ref().unwrap(), &cli.password.as_ref().unwrap()) {
+        let otp_token = match cli.otp_token {
+            Some(ref otp_token) => otp_token,
+            None => "",
+        };
+    match api::login(&client, &cli.username.as_ref().unwrap(), &cli.password.as_ref().unwrap(), otp_token) {
             Ok(_) => (),
             Err(e) => {
                 println!("Error: {}", e);

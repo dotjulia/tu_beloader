@@ -13,6 +13,7 @@ struct TubeApp {
     search_results: Option<api::SearchRequest>,
     episodes: Option<SeriesRequest>,
     search_error: String,
+    otp_token: String,
 }
 
 impl TubeApp {
@@ -27,6 +28,7 @@ impl TubeApp {
             search_results: None,
             search_error: String::new(),
             episodes: None,
+            otp_token: String::new(),
         }
     }
 }
@@ -55,8 +57,12 @@ impl eframe::App for TubeApp {
                     ui.label("Password");
                     ui.text_edit_singleline(&mut self.password);
                 });
+                ui.horizontal(|ui| {
+                    ui.label("OTP");
+                    ui.text_edit_singleline(&mut self.otp_token);
+                });
                 if ui.button("Login").clicked() {
-                    match api::login(&self.client, &self.username, &self.password) {
+                    match api::login(&self.client, &self.username, &self.password, &self.otp_token) {
                         Ok(_) => self.logged = true,
                         Err(e) => {
                             self.login_error = e + "\nSome errors require a restart of the application";

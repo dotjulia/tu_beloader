@@ -57,7 +57,7 @@ pub struct SeriesRequest {
     pub search_results: SearchResults,
 }
 
-pub fn login(client: &Client, username: &str, password: &str) -> Result<(), String> {
+pub fn login(client: &Client, username: &str, password: &str, otp_token: &str) -> Result<(), String> {
     let resp = client.get("https://tube.tugraz.at/Shibboleth.sso/Login?target=/paella/ui/index.html").send().map_err(|e| e.to_string())?;
     let res_text = resp.text().map_err(|e| e.to_string())?;
     let re = Regex::new(r#"/idp/profile/SAML2/Redirect/SSO;jsessionid=.*?execution=e1s1"#).unwrap();
@@ -72,10 +72,25 @@ pub fn login(client: &Client, username: &str, password: &str) -> Result<(), Stri
         ("_eventId_proceed", ""),
     ];
     let login_response = client.post("https://sso.tugraz.at".to_owned() + login_url).form(&params).send().map_err(|e| e.to_string())?;
-    if login_response.status().is_success() && login_response.text().map_err(|e| e.to_string())?.contains("Welcome to TU Graz TUbe") {
+    let login_response_text = login_response.text().map_err(|e| e.to_string())?;
+    if login_response_text.contains("Welcome to TU Graz TUbe") {
         Ok(())
     } else {
-        Err("Login failed".to_owned())
+        println!("Trying OTP value");
+        let params_otp = [
+            ("lang", "de"),
+            ("j_tokenNumber", otp_token),
+            ("_eventId_proceed", ""),
+        ];
+        let otp_url = &login_url.to_string().replace("e1s1", "e1s2");
+        let otp_response = client.post("https://sso.tugraz.at".to_owned() + otp_url).form(&params_otp).send().map_err(|e| e.to_string())?;
+        let otp_response_text = otp_response.text().map_err(|e| e.to_string())?;
+        if otp_response_text.contains("Welcome to TU Graz TUbe") {
+            Ok(())
+        } else {
+            println!("{}", otp_response_text);
+            Err("Login failed".to_owned())
+        }
     }
 }
 
